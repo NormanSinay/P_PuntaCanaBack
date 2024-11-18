@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configurar Fecha de Inicio</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Configurar Fecha de Inicio</h1>
+
+    <!-- Mostrar la fecha actual -->
+    <div id="current-date">
+      <h2>Fecha actual configurada:</h2>
+      <p id="fecha-actual">Cargando...</p>
+    </div>
+
+    <!-- Formulario para agregar una nueva fecha -->
+    <div class="form-container">
+      <h2>Agregar Nueva Fecha</h2>
+      <form id="fecha-form">
+        <label for="nuevaFecha">Nueva Fecha:</label>
+        <input type="datetime-local" id="nuevaFecha" name="nuevaFecha" required>
+        <button type="submit">Actualizar Fecha</button>
+      </form>
+      <p id="feedback" class="feedback"></p>
+    </div>
+  </div>
+
+  <script>
+    const apiUrl = 'http://localhost:3000/api/fecha-inicio';
+    // Cargar la fecha actual configurada
+    async function fetchCurrentDate() {
+      try {
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+        const fechaActual = new Date(data.fechaInicio).toLocaleString();
+        document.getElementById('fecha-actual').textContent = fechaActual;
+      } catch (error) {
+        document.getElementById('fecha-actual').textContent = 'Error al cargar la fecha.';
+        console.error('Error al obtener la fecha actual:', error);
+      }
+    }
+
+    // Enviar nueva fecha al servidor
+    async function updateFecha(event) {
+      event.preventDefault();
+      const nuevaFechaInput = document.getElementById('nuevaFecha');
+      const nuevaFecha = nuevaFechaInput.value;
+
+      if (!nuevaFecha) {
+        showFeedback('Por favor, ingresa una fecha válida.', true);
+        return;
+      }
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ nuevaFecha })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          showFeedback('Fecha actualizada correctamente.', false);
+          document.getElementById('fecha-actual').textContent = new Date(data.fechaInicio).toLocaleString();
+          nuevaFechaInput.value = ''; // Limpiar campo
+        } else {
+          const errorData = await response.json();
+          showFeedback(errorData.error || 'Error al actualizar la fecha.', true);
+        }
+      } catch (error) {
+        showFeedback('Error al comunicarse con el servidor.', true);
+        console.error('Error al actualizar la fecha:', error);
+      }
+    }
+
+    // Mostrar mensajes de retroalimentación
+    function showFeedback(message, isError) {
+      const feedbackElement = document.getElementById('feedback');
+      feedbackElement.textContent = message;
+      feedbackElement.style.color = isError ? 'red' : 'green';
+    }
+
+    // Event listeners
+    document.getElementById('fecha-form').addEventListener('submit', updateFecha);
+
+    // Inicializar
+    fetchCurrentDate();
+  </script>
+</body>
+</html>
