@@ -3,80 +3,188 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Configurar Fecha de Inicio</title>
+  <title>Configurar Etapas</title>
   <link rel="stylesheet" href="styles.css">
+  <style>
+    .container {
+      max-width: 800px;
+      margin: auto;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
+
+    h1, h2 {
+      text-align: center;
+      color: #333;
+    }
+
+    .form-container {
+      margin-top: 20px;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+
+    .etapa-config {
+      margin-bottom: 15px;
+      padding: 10px;
+      border: 1px dashed #aaa;
+      border-radius: 8px;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    button {
+      display: block;
+      background-color: #007BFF;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #feedback {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    .etapas-list {
+      margin-top: 20px;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+
+    .etapas-list h3 {
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
-    <h1>Configurar Fecha de Inicio</h1>
+    <h1>Configurar Etapas</h1>
 
-    <!-- Mostrar la fecha actual -->
-    <div id="current-date">
-      <h2>Fecha actual configurada:</h2>
-      <p id="fecha-actual">Cargando...</p>
+    <!-- Mostrar las etapas configuradas -->
+    <div id="current-etapas" class="etapas-list">
+      <h3>Etapas Actuales:</h3>
+      <ul id="lista-etapas">
+        <li>Cargando etapas...</li>
+      </ul>
     </div>
 
-    <!-- Formulario para agregar una nueva fecha -->
+    <!-- Formulario para agregar etapas -->
     <div class="form-container">
-      <h2>Agregar Nueva Fecha</h2>
-      <form id="fecha-form">
-        <label for="nuevaFecha">Nueva Fecha:</label>
-        <input type="datetime-local" id="nuevaFecha" name="nuevaFecha" required>
-        <button type="submit">Actualizar Fecha</button>
+      <h2>Agregar Nueva Etapa</h2>
+      <form id="etapas-form">
+        <div id="etapas-inputs">
+          <div class="etapa-config">
+            <label for="nombre">Nombre:</label>
+            <input type="text" name="nombre" placeholder="Nombre de la etapa" required />
+
+            <label for="fechaInicio">Fecha de Inicio:</label>
+            <input type="datetime-local" name="fechaInicio" required />
+
+            <label for="duracion">Duración (en horas):</label>
+            <input type="number" name="duracion" min="1" required />
+          </div>
+        </div>
+        <button type="button" id="agregar-etapa">Agregar Otra Etapa</button>
+        <button type="submit">Guardar Etapas</button>
       </form>
       <p id="feedback" class="feedback"></p>
     </div>
   </div>
 
   <script>
-    const apiUrl = 'https://p-puntacanaback.onrender.com/api/fecha-inicio';
-    // Cargar la fecha actual configurada
-    async function fetchCurrentDate() {
+    const apiUrl = 'https://p-puntacanaback.onrender.com/api/etapas';
+
+    // Cargar las etapas actuales desde el servidor
+    async function fetchEtapas() {
       try {
         const response = await fetch(apiUrl);
         const data = await response.json();
-        const fechaActual = new Date(data.fechaInicio).toLocaleString();
-        document.getElementById('fecha-actual').textContent = fechaActual;
+
+        const listaEtapas = document.getElementById('lista-etapas');
+        listaEtapas.innerHTML = '';
+        data.forEach((etapa) => {
+          const li = document.createElement('li');
+          li.textContent = `${etapa.nombre} - Inicio: ${new Date(etapa.fechaInicio).toLocaleString()} - Duración: ${(etapa.duracion / 3600000).toFixed(2)} horas`;
+          listaEtapas.appendChild(li);
+        });
       } catch (error) {
-        document.getElementById('fecha-actual').textContent = 'Error al cargar la fecha.';
-        console.error('Error al obtener la fecha actual:', error);
+        console.error('Error al obtener las etapas:', error);
+        document.getElementById('lista-etapas').textContent = 'Error al cargar las etapas.';
       }
     }
 
-    // Enviar nueva fecha al servidor
-    async function updateFecha(event) {
-      event.preventDefault();
-      const nuevaFechaInput = document.getElementById('nuevaFecha');
-      const nuevaFecha = nuevaFechaInput.value;
+    // Agregar un nuevo formulario de etapa
+    document.getElementById('agregar-etapa').addEventListener('click', () => {
+      const container = document.getElementById('etapas-inputs');
+      const newEtapa = document.createElement('div');
+      newEtapa.classList.add('etapa-config');
+      newEtapa.innerHTML = `
+        <label for="nombre">Nombre:</label>
+        <input type="text" name="nombre" placeholder="Nombre de la etapa" required />
 
-      if (!nuevaFecha) {
-        showFeedback('Por favor, ingresa una fecha válida.', true);
-        return;
-      }
+        <label for="fechaInicio">Fecha de Inicio:</label>
+        <input type="datetime-local" name="fechaInicio" required />
+
+        <label for="duracion">Duración (en horas):</label>
+        <input type="number" name="duracion" min="1" required />
+      `;
+      container.appendChild(newEtapa);
+    });
+
+    // Enviar etapas al servidor
+    document.getElementById('etapas-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const etapasInputs = document.querySelectorAll('.etapa-config');
+      const nuevasEtapas = Array.from(etapasInputs).map((etapa) => {
+        const nombre = etapa.querySelector('[name="nombre"]').value;
+        const fechaInicio = etapa.querySelector('[name="fechaInicio"]').value;
+        const duracion = parseInt(etapa.querySelector('[name="duracion"]').value, 10) * 3600000;
+
+        return { nombre, fechaInicio, duracion };
+      });
 
       try {
         const response = await fetch(apiUrl, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ nuevaFecha })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(nuevasEtapas),
         });
 
         if (response.ok) {
-          const data = await response.json();
-          showFeedback('Fecha actualizada correctamente.', false);
-          document.getElementById('fecha-actual').textContent = new Date(data.fechaInicio).toLocaleString();
-          nuevaFechaInput.value = ''; // Limpiar campo
+          showFeedback('Etapas guardadas correctamente.', false);
+          fetchEtapas(); // Recargar etapas
         } else {
           const errorData = await response.json();
-          showFeedback(errorData.error || 'Error al actualizar la fecha.', true);
+          showFeedback(errorData.error || 'Error al guardar las etapas.', true);
         }
       } catch (error) {
+        console.error('Error al guardar las etapas:', error);
         showFeedback('Error al comunicarse con el servidor.', true);
-        console.error('Error al actualizar la fecha:', error);
       }
-    }
+    });
 
     // Mostrar mensajes de retroalimentación
     function showFeedback(message, isError) {
@@ -85,11 +193,8 @@
       feedbackElement.style.color = isError ? 'red' : 'green';
     }
 
-    // Event listeners
-    document.getElementById('fecha-form').addEventListener('submit', updateFecha);
-
-    // Inicializar
-    fetchCurrentDate();
+    // Inicializar la página
+    fetchEtapas();
   </script>
 </body>
 </html>

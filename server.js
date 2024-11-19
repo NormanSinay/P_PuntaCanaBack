@@ -1,59 +1,74 @@
 const express = require('express');
 const app = express();
 const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
 
 // Middleware
 app.use(cors());
-app.use(express.json()); // Para manejar JSON en solicitudes POST
+app.use(express.json());
 
-// Archivo para almacenar la fecha de inicio
-const FILE_PATH = path.join(__dirname, 'fecha-inicio.json');
+// Fechas y configuraciones iniciales de las etapas
+let etapas = [
+  {
+    id: 1,
+    nombre: "Preparándose para el viaje",
+    fechaInicio: new Date(),
+    duracion: 24 * 60 * 60 * 1000, // 24 horas en milisegundos
+  },
+  {
+    id: 2,
+    nombre: "En el vuelo",
+    duracion: 12 * 60 * 60 * 1000, // 12 horas en milisegundos
+  },
+  {
+    id: 3,
+    nombre: "En el destino: Punta Cana",
+    duracion: 48 * 60 * 60 * 1000, // 48 horas en milisegundos
+  },
+];
 
-// Función para cargar la fecha de inicio desde el archivo
-function cargarFechaInicio() {
-  if (fs.existsSync(FILE_PATH)) {
-    const data = fs.readFileSync(FILE_PATH, 'utf-8');
-    return new Date(JSON.parse(data).fechaInicio);
+// Configurar fechas iniciales de las etapas
+function configurarFechas() {
+  for (let i = 1; i < etapas.length; i++) {
+    etapas[i].fechaInicio = new Date(etapas[i - 1].fechaInicio.getTime() + etapas[i - 1].duracion);
   }
-  return null;
 }
+configurarFechas();
 
-// Función para guardar la fecha de inicio en el archivo
-function guardarFechaInicio(fecha) {
-  const data = { fechaInicio: fecha.toISOString() };
-  fs.writeFileSync(FILE_PATH, JSON.stringify(data), 'utf-8');
-}
-
-// Cargar o establecer una fecha inicial predeterminada
-let fechaInicio = cargarFechaInicio();
-if (!fechaInicio) {
-  fechaInicio = new Date();
-  fechaInicio.setDate(fechaInicio.getDate() + 1); // Predeterminado: 1 día después de ahora
-  guardarFechaInicio(fechaInicio);
-}
-
-// Endpoint para obtener la fecha de inicio
-app.get('/api/fecha-inicio', (req, res) => {
-  res.json({ fechaInicio: fechaInicio.toISOString() });
+// Endpoint para obtener las etapas
+app.get('/api/etapas', (req, res) => {
+  const now = new Date();
+  const respuesta = etapas.map((etapa) => {
+    const tiempoRestante = etapa.fechaInicio.getTime() - now.getTime();
+    return {
+      id: etapa.id,
+      nombre: etapa.nombre,
+      fechaInicio: etapa.fechaInicio.toISOString(),
+      tiempoRestante: tiempoRestante > 0 ? tiempoRestante : 0,
+    };
+  });
+  res.json(respuesta);
 });
 
-// Endpoint para actualizar la fecha de inicio
-app.post('/api/fecha-inicio', (req, res) => {
-  const { nuevaFecha } = req.body;
-  if (!nuevaFecha) {
-    return res.status(400).json({ error: 'Se requiere la nueva fecha.' });
+// Endpoint para actualizar etapas manualmente
+app.post('/api/etapas', (req, res) => {
+  const nuevasEtapas = req.body;
+
+  // Validar los datos enviados
+  if (!Array.isArray(nuevasEtapas) || nuevasEtapas.length === 0) {
+    return res.status(400).json({ error: 'Debe enviar un arreglo de etapas válido' });
   }
 
-  const nuevaFechaInicio = new Date(nuevaFecha);
-  if (isNaN(nuevaFechaInicio.getTime())) {
-    return res.status(400).json({ error: 'La fecha proporcionada no es válida.' });
-  }
+  etapas = nuevasEtapas.map((etapa, index) => {
+    return {
+      id: index + 1,
+      nombre: etapa.nombre || `Etapa ${index + 1}`,
+      fechaInicio: etapa.fechaInicio ? new Date(etapa.fechaInicio) : new Date(),
+      duracion: etapa.duracion || 0, // Asignar duración predeterminada si no se especifica
+    };
+  });
 
-  fechaInicio = nuevaFechaInicio;
-  guardarFechaInicio(fechaInicio);
-  res.json({ mensaje: 'Fecha de inicio actualizada correctamente.', fechaInicio: fechaInicio.toISOString() });
+  configurarFechas();
+  res.json({ message: 'Etapas actualizadas correctamente' });
 });
 
 // Iniciar servidor
